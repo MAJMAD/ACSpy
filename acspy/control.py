@@ -3,22 +3,34 @@
 This module contains an [incomplete] object for communicating with an ACS controller.
 
 """
-from __future__ import division, print_function
+#from __future__ import division, print_function
 from acspy import acsc
 
-class Controller(object):
-    def __init__(self, contype="simulator", n_axes=8):
+
+class ACSController(object):
+    def __init__(self, contype="simulator", n_axes=8, address="10.0.0.100", port=701, serialport=""):
+        """
+        Initialization function of ACSController class
+        :param string contype: connection type, can be simulator, ethernet, or serial
+        :param int n_axes: number of axes to be accessible by controller
+        :param string address: ip address for TCP/IP connections
+        :param int port: port number for TCP/IP connection
+        :param string serialport: serial port for serial connection
+        """
         self.contype = contype
         self.axes = []
-        for n in range(n_axes):
-            self.axes.append(Axis(self, n))
-        
-    def connect(self, address="10.0.0.100", port=701):
         if self.contype == "simulator":
-            self.hc = acsc.openCommDirect()
+            pass
+            #TODO update to recognize deprecation of opencommdirect function
+            #self.hc = acsc.openCommDirect()
         elif self.contype == "ethernet":
             self.hc = acsc.openCommEthernetTCP(address=address, port=port)
-	
+        # else
+        #     self.hc = acsc.openCommSerial()
+        # TODO add serial connectivity
+        for n in range(n_axes):
+            self.axes.append(Axis(self, n))
+
     def enable_all(self, wait=acsc.SYNCHRONOUS):
         """Enables all axes."""
         for a in self.axes:
@@ -30,12 +42,16 @@ class Controller(object):
             a.disable()
         
     def disconnect(self):
+        """
+        Close communication channel with controller
+        :return: None
+        """
         acsc.closeComm(self.hc)
         
 
 class Axis(object):
     def __init__(self, controller, axisno, name=None):
-        if isinstance(controller, Controller):
+        if isinstance(controller, ACSController):
             self.controller = controller
         else:
             raise TypeError("Controller is not a valid Controller object")
@@ -44,10 +60,10 @@ class Axis(object):
             controller.axisdefs[name] = axisno
         
     def enable(self, wait=acsc.SYNCHRONOUS):
-        acsc.enable(self.controller.hc, self.axisno, wait)
+        return acsc.enable(self.controller.hc, self.axisno, wait)
 
     def disable(self, wait=acsc.SYNCHRONOUS):
-        acsc.disable(self.controller.hc, self.axisno, wait)
+         return acsc.disable(self.controller.hc, self.axisno, wait)
         
     def ptp(self, target, coordinates="absolute", wait=acsc.SYNCHRONOUS):
         """Performs a point to point move in either relative or absolute
@@ -56,7 +72,7 @@ class Axis(object):
             flags = acsc.AMF_RELATIVE
         else:
             flags = None
-        acsc.toPoint(self.controller.hc, flags, self.axisno, target, wait)
+        return acsc.toPoint(self.controller.hc, flags, self.axisno, target, wait)
         
     def ptpr(self, distance, wait=acsc.SYNCHRONOUS):
         """Performance a point to point move in relative coordinates."""
@@ -101,6 +117,11 @@ class Axis(object):
 
     @property
     def fpos(self):
+        """
+        The function retrieves an instant value of the motor feedback position.
+        :return: position of the axes
+        :rtype: int
+        """
         return acsc.getFPosition(self.controller.hc, self.axisno)
         
     @property
@@ -112,10 +133,10 @@ class Axis(object):
         return acsc.getFVelocity(self.controller.hc, self.axisno)
         
     @property
-    def vel(self):
+    def getVel(self):
         return acsc.getVelocity(self.controller.hc, self.axisno)
-    @vel.setter
-    def vel(self, velocity):
+
+    def setVel(self, velocity):
         """Sets axis velocity."""
         acsc.setVelocity(self.controller.hc, self.axisno, velocity)
         

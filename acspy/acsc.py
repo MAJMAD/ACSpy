@@ -109,25 +109,10 @@ ax_mflags = {
 
 
 def openCommDirect():
-    """Open simulator. Returns communication handle."""
-    # caution: acs does treat errors differently for openComm functions!
-    hcomm = acs.acsc_OpenCommDirect()
-    if hcomm == -1:
-        err = getLastError()
-        err_lng = int32()
-        s = create_string_buffer(256)
-        if (
-            acs.acsc_GetErrorString(
-                hcomm, int32(err), s, int32(ctypes.sizeof(s)), byref(err_lng)
-            )
-            != 0
-        ):
-            s[err_lng.value] = 0
-            err_str = s.value.decode("ascii")
-            raise AcscError(str(err) + ": " + err_str)
-        else:
-            raise AcscError(err)
-    return hcomm
+    """
+    C function has been deprecated!
+    """
+    pass
 
 
 def openCommEthernetTCP(address="10.0.0.100", port=701):
@@ -150,6 +135,31 @@ def openCommEthernetTCP(address="10.0.0.100", port=701):
         else:
             raise AcscError(err)
 
+    return hcomm
+
+def openCommSerial(channel=-1, rate=115200):
+    """
+    The function opens communication with the controller via a serial port.
+    :param channel: COM port to connect to
+    :param rate: Baud rate
+    :return: communication handle
+    """
+    hcomm = acs.acsc_OpenCommSerial(channel, rate)
+    if hcomm == -1:
+        err = getLastError()
+        err_lng = int32()
+        s = create_string_buffer(256)
+        if (
+            acs.acsc_GetErrorString(
+                hcomm, int32(err), s, int32(ctypes.sizeof(s)), byref(err_lng)
+            )
+            != 0
+        ):
+            s[err_lng.value] = 0
+            err_str = s.value.decode("ascii")
+            raise AcscError(str(err) + ": " + err_str)
+        else:
+            raise AcscError(err)
     return hcomm
 
 
@@ -260,8 +270,30 @@ def jog(hcomm, flags, axis, vel, wait=SYNCHRONOUS):
 
 
 def toPoint(hcomm, flags, axis, target, wait=SYNCHRONOUS):
-    """Point to point move."""
-    call_acsc(acs.acsc_ToPoint, hcomm, flags, axis, double(target), wait)
+    """
+    The function initiates a single-axis motion to the specified point
+    :param hcomm: Communication handle
+    :param int flags: Bit-mapped parameter that can include one or more of the following flags:
+        ACSC_AMF_WAIT: plan the motion but don’t start it until the function acsc_Go is
+        executed.
+        ACSC_AMF_RELATIVE: the Point value is relative to the end point of the
+        previous motion. If the flag is not specified, the Point specifies an absolute
+        coordinate.
+    :param int axis: Axis identifier
+    :param float target: Coordinate of the target point. Converts to c_double.
+    :param ACS_WAITBLOCK wait: Pointer to ACSC_WAITBLOCK structure.
+        If Wait is ACSC_SYNCHRONOUS, the function returns when the controller
+        response is received.
+        If Wait points to a valid ACSC_WAITBLOCK structure, the function returns
+        immediately. The calling thread must then call the acsc_WaitForAsyncCall
+        function to retrieve the operation result.
+        If Wait is ACSC_IGNORE, the function returns immediately. In this case, the
+        operation result is ignored by the library and cannot be retrieved to the calling
+        thread.
+    :return: Int, If the function succeeds, the return value is non-zero.
+        If the function fails, the return value is zero.
+    """
+    return call_acsc(acs.acsc_ToPoint, hcomm, flags, axis, double(target), wait)
 
 
 def toPointM(hcomm, flags, axes, target, wait=SYNCHRONOUS):
@@ -281,7 +313,7 @@ def toPointM(hcomm, flags, axes, target, wait=SYNCHRONOUS):
 
 
 def enable(hcomm, axis, wait=SYNCHRONOUS):
-    call_acsc(acs.acsc_Enable, hcomm, int32(axis), wait)
+    return call_acsc(acs.acsc_Enable, hcomm, int32(axis), wait)
 
 
 def commutate(
@@ -314,7 +346,7 @@ def waitCommutated(hcomm, axis, timeout=INFINITE):
 
 
 def disable(hcomm, axis, wait=SYNCHRONOUS):
-    call_acsc(acs.acsc_Disable, hcomm, int32(axis), wait)
+    return call_acsc(acs.acsc_Disable, hcomm, int32(axis), wait)
 
 
 def getRPosition(hcomm, axis, wait=SYNCHRONOUS):
